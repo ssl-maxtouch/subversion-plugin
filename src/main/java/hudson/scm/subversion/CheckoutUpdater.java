@@ -88,10 +88,19 @@ public class CheckoutUpdater extends WorkspaceUpdater {
 
                 try {
                     SVNRevision r = getRevision(location);
-                    String revisionName = r.getDate() != null ? fmt.format(r.getDate()) : r.toString();
-
+                    boolean do_peg = true;
+                    if(r.getNumber() == 0) {
+                        /* 
+                           This is to support polling + optional revision peg in parameterized build.
+                           0 is the 'Default Value' to be used in the parameterized build
+                           Supposing that the input parameter 'Name' is SVN_PEG_PARAMETER,
+                           then the 'Repository URL' would have a trailing @${SVN_PEG_PARAMETER}
+                        */
+                        do_peg = false;
+                    }
+                    listener.getLogger().println("do_peg: " + do_peg);
                     listener.getLogger().println("Checking out " + location.getSVNURL().toString() + " at revision " +
-                            revisionName);
+                            (do_peg ? r.getNumber() : "HEAD"));
 
                     File local = new File(ws, location.getLocalDir());
                     SubversionUpdateEventHandler eventHandler = new SubversionUpdateEventHandler(new PrintStream(pos), externals, local, location.getLocalDir());
@@ -103,7 +112,9 @@ public class CheckoutUpdater extends WorkspaceUpdater {
                     checkout.setSource(SvnTarget.fromURL(location.getSVNURL(), SVNRevision.HEAD));
                     checkout.setSingleTarget(SvnTarget.fromFile(local.getCanonicalFile()));
                     checkout.setDepth(svnDepth);
-                    checkout.setRevision(r);
+                    if(do_peg) {
+                        checkout.setRevision(r);
+                    }
                     checkout.setAllowUnversionedObstructions(true);
                     checkout.setIgnoreExternals(location.isIgnoreExternalsOption());
                     checkout.setExternalsHandler(SvnCodec.externalsHandler(svnuc.getExternalsHandler()));
