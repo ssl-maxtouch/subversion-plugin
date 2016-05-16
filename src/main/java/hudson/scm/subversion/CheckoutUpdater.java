@@ -28,17 +28,20 @@ package hudson.scm.subversion;
 
 import hudson.Extension;
 import hudson.Util;
+import hudson.EnvVars;
 import hudson.scm.SubversionSCM.External;
 import hudson.scm.SubversionWorkspaceSelector;
 import hudson.util.IOException2;
 import hudson.util.StreamCopyThread;
+import hudson.model.*;
+import hudson.remoting.Channel;
+import hudson.remoting.VirtualChannel;
 
 import org.apache.commons.lang.time.FastDateFormat;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.tmatesoft.svn.core.SVNCancelException;
 import org.tmatesoft.svn.core.SVNDepth;
 import org.tmatesoft.svn.core.SVNException;
-import org.tmatesoft.svn.core.internal.util.DefaultSVNDebugLogger;
 import org.tmatesoft.svn.core.internal.wc17.db.ISVNWCDb;
 import org.tmatesoft.svn.core.internal.wc2.compat.SvnCodec;
 import org.tmatesoft.svn.core.wc.SVNRevision;
@@ -52,7 +55,9 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import jenkins.model.Jenkins;
 
 /**
  * {@link WorkspaceUpdater} that does a fresh check out.
@@ -86,9 +91,56 @@ public class CheckoutUpdater extends WorkspaceUpdater {
                 StreamCopyThread sct = new StreamCopyThread("svn log copier", new PipedInputStream(pos), listener.getLogger());
                 sct.start();
 
+                SVNRevision r = null;
+                Jenkins instance = Jenkins.getInstance();
+                List<AbstractProject> allItems;
+                if (instance == null) {
+                    allItems = Collections.emptyList();
+                } else {
+                    allItems = instance.getAllItems(AbstractProject.class);
+                }
+                for (AbstractProject<?, ?> job : allItems) {
+                    if(job.isBuilding() && job.isParameterized()) {
+                        VirtualChannel channel = null;
+                        //channel = job.getCharacteristicEnvVars().getWorkspace().getChannel();
+                        //channel.
+                        //String nodeName = ((Channel) channel).getName();
+                        // EnvVars env = job.getEnvironment(instance.getNode(nodeName), listener);
+                        EnvVars env = job.getCharacteristicEnvVars();
+                        for(String key : env.descendingKeySet()) {
+                            listener.getLogger().println(key);
+                        }
+                        for (JobProperty property : job.getProperties().values()) {
+                            if (property instanceof ParametersDefinitionProperty) {
+                                ParametersDefinitionProperty pdp = (ParametersDefinitionProperty) property;
+                                for (String propertyName : pdp.getParameterDefinitionNames()) {
+                                    listener.getLogger().println(propertyName);
+                                    if (propertyName.contains("SVN_PEG_PARAMETER")) {
+                                        listener.getLogger().println("YES!");
+                                        ParameterDefinition pd = pdp.getParameterDefinition(propertyName);
+                                        ParameterValue pv = pd.getDefaultParameterValue();
+                                        String replacement = pd.getDescriptor().getValuePage();
+                                        listener.getLogger().println(replacement);
+                                        if (pv != null) {
+                                            //replacement = pv.getValue().toString();
+                                            //replacement = String.valueOf(pv.createVariableResolver(null).resolve(propertyName));
+                                            listener.getLogger().println("SVN_PEG_PARAMETER:" + replacement);
+                                            if(!replacement.isEmpty()) {
+                                                r = SVNRevision.parse(replacement);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (r == null) {
+                    r = getRevision(location);
+                }
+
                 try {
-                    SVNRevision r = getRevision(location);
-                    String revisionName = r.getDate() != null ? fmt.format(r.getDate()) : r.toString();
+                    String revisionName = String.valueOf(r.getNumber());
 
                     listener.getLogger().println("Checking out " + location.getSVNURL().toString() + " at revision " +
                             revisionName);
