@@ -86,6 +86,9 @@ public class CheckoutUpdater extends WorkspaceUpdater {
                 StreamCopyThread sct = new StreamCopyThread("svn log copier", new PipedInputStream(pos), listener.getLogger());
                 sct.start();
 
+                String svn_peg_parameter = job_env.get("SVN_PEG_PARAMETER", "");
+                listener.getLogger().println("found SVN_PEG_PARAMETER = " + svn_peg_parameter);
+
                 try {
                     SVNRevision r = getRevision(location);
                     String revisionName = r.getDate() != null ? fmt.format(r.getDate()) : r.toString();

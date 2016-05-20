@@ -827,10 +827,9 @@ public class SubversionSCM extends SCM implements Serializable {
         }
 
         String svn_peg_parameter = env.get("SVN_PEG_PARAMETER", "");
-        listener.getLogger().println("SVN_PEG_PARAMETER = " + svn_peg_parameter);
 
         List<External> externals = null;
-            externals = checkout(build,workspace,listener,env);
+        externals = checkout(build,workspace,listener,env);
 
         // write out the revision file
         PrintWriter w = new PrintWriter(new FileOutputStream(getRevisionFile(build)));
@@ -948,11 +947,12 @@ public class SubversionSCM extends SCM implements Serializable {
     private static class CheckOutTask extends UpdateTask implements FileCallable<List<External>> {
         private final UpdateTask task;
 
-         public CheckOutTask(Run<?, ?> build, SubversionSCM parent, ModuleLocation location, Date timestamp, TaskListener listener, EnvVars env) {
+        public CheckOutTask(Run<?, ?> build, SubversionSCM parent, ModuleLocation location, Date timestamp, TaskListener listener, EnvVars env) {
             this.authProvider = parent.createAuthenticationProvider(build.getParent(), location);
             this.timestamp = timestamp;
             this.listener = listener;
             this.location = location;
+            this.job_env = env;
             this.revisions = build.getAction(RevisionParameterAction.class);
             this.task = parent.getWorkspaceUpdater().createTask();
         }
