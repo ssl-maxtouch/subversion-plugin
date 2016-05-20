@@ -87,10 +87,17 @@ public class CheckoutUpdater extends WorkspaceUpdater {
                 sct.start();
 
                 String svn_peg_parameter = job_env.get("SVN_PEG_PARAMETER", "");
-                listener.getLogger().println("found SVN_PEG_PARAMETER = " + svn_peg_parameter);
+                listener.getLogger().println("SVN_PEG_PARAMETER = " + svn_peg_parameter);
 
                 try {
-                    SVNRevision r = getRevision(location);
+                    SVNRevision r = null;
+                    if (!svn_peg_parameter.isEmpty() && !svn_peg_parameter.contentEquals("HEAD")) {
+                        r = SVNRevision.parse(svn_peg_parameter);
+                    }
+                    else {
+                        r = getRevision(location);
+                    }
+
                     String revisionName = r.getDate() != null ? fmt.format(r.getDate()) : r.toString();
 
                     listener.getLogger().println("Checking out " + location.getSVNURL().toString() + " at revision " +

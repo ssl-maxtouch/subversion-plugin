@@ -826,8 +826,6 @@ public class SubversionSCM extends SCM implements Serializable {
             EnvVarsUtils.overrideAll(env, ((AbstractBuild) build).getBuildVariables());
         }
 
-        String svn_peg_parameter = env.get("SVN_PEG_PARAMETER", "");
-
         List<External> externals = null;
         externals = checkout(build,workspace,listener,env);
 
