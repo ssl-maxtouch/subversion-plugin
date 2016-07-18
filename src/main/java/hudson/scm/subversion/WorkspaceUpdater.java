@@ -23,6 +23,7 @@
  */
 package hudson.scm.subversion;
 
+import hudson.EnvVars;
 import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Describable;
@@ -124,6 +125,11 @@ public abstract class WorkspaceUpdater extends AbstractDescribableImpl<Workspace
         public TaskListener listener;
 
         /**
+         * to access job parameterised build environment variables.
+         */
+        public EnvVars job_env;
+
+        /**
          * Modules to check out. Never null.
          */
         public ModuleLocation location;
@@ -158,6 +164,7 @@ public abstract class WorkspaceUpdater extends AbstractDescribableImpl<Workspace
             t.location = this.location;
             t.revisions = this.revisions;
             t.ws = this.ws;
+            t.job_env = this.job_env;
 
             return t.perform();
         }
